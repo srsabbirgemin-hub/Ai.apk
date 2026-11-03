@@ -1,6 +1,7 @@
 package com.example.agent
 
 import android.app.ActivityManager
+import android.app.DownloadManager
 import android.app.SearchManager
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -15,7 +16,9 @@ import android.os.Build
 import android.os.Environment
 import android.os.StatFs
 import android.provider.AlarmClock
+import android.provider.CalendarContract
 import android.provider.ContactsContract
+import android.provider.MediaStore
 import android.provider.Settings
 import androidx.core.content.ContextCompat
 import com.example.service.AetherAccessibilityService
@@ -86,6 +89,21 @@ class ActionExecutor(private val context: Context) {
                 "display_settings" -> openSystemSetting(Settings.ACTION_DISPLAY_SETTINGS, "Display Settings")
                 "sound_settings" -> openSystemSetting(Settings.ACTION_SOUND_SETTINGS, "Sound Settings")
                 "date_settings" -> openSystemSetting(Settings.ACTION_DATE_SETTINGS, "Date & Time Settings")
+                "hotspot_settings" -> openSystemSetting(Settings.ACTION_WIRELESS_SETTINGS, "Hotspot Settings")
+                "location_settings", "gps_settings" -> openSystemSetting(Settings.ACTION_LOCATION_SOURCE_SETTINGS, "Location / GPS Settings")
+                "airplane_settings" -> openSystemSetting(Settings.ACTION_AIRPLANE_MODE_SETTINGS, "Airplane Mode Settings")
+                "accessibility_settings" -> openSystemSetting(Settings.ACTION_ACCESSIBILITY_SETTINGS, "Accessibility Settings")
+                "app_settings", "manage_apps" -> openSystemSetting(Settings.ACTION_APPLICATION_SETTINGS, "App Management Settings")
+                "storage_settings" -> openSystemSetting(Settings.ACTION_INTERNAL_STORAGE_SETTINGS, "Storage Settings")
+
+                // Device Apps & Media
+                "camera", "take_photo" -> openCamera()
+                "gallery", "photos" -> openGallery()
+                "voice_recorder", "recorder", "record_audio" -> openVoiceRecorder()
+                "calendar", "calendar_event", "add_event" -> addCalendarEvent(target ?: "Aether Reminder", extra)
+                "email", "send_email", "mail" -> sendEmail(target ?: "", extra, null)
+                "files", "downloads", "file_manager" -> openFiles()
+                "clock", "alarms", "stopwatch" -> openClock()
 
                 // Accessibility System Gestures
                 "read_screen" -> readScreen()
@@ -106,7 +124,12 @@ class ActionExecutor(private val context: Context) {
                 "random_number" -> generateRandomNumber(target)
                 "generate_password" -> generatePassword(target?.toIntOrNull() ?: 12)
                 "copy_clipboard" -> copyToClipboard(target ?: extra ?: "")
+                "read_clipboard" -> readClipboard()
+                "clear_clipboard" -> clearClipboard()
                 "daily_briefing" -> getDailyBriefing()
+                "translate", "translate_text" -> quickTranslate(target ?: extra ?: "", extra)
+                "nearby", "nearby_search" -> searchNearby(target ?: extra ?: "restaurants")
+                "speed_test" -> speedTest()
 
                 else -> ExecutionResult.Failure("Unknown action: $actionType")
             }
@@ -778,5 +801,170 @@ class ActionExecutor(private val context: Context) {
             context.startActivity(homeIntent)
             ExecutionResult.Success("Navigated Home")
         }
+    }
+
+    private fun openCamera(): ExecutionResult {
+        val intent = Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return try {
+            context.startActivity(intent)
+            ExecutionResult.Success("Camera opened")
+        } catch (_: Exception) {
+            openApp("camera")
+        }
+    }
+
+    private fun openGallery(): ExecutionResult {
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            type = "image/*"
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return try {
+            context.startActivity(intent)
+            ExecutionResult.Success("Gallery opened")
+        } catch (_: Exception) {
+            openApp("photos")
+        }
+    }
+
+    private fun openVoiceRecorder(): ExecutionResult {
+        val intent = Intent(MediaStore.Audio.Media.RECORD_SOUND_ACTION).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return try {
+            context.startActivity(intent)
+            ExecutionResult.Success("Sound Recorder opened")
+        } catch (_: Exception) {
+            val pm = context.packageManager
+            val soundLaunch = pm.getLaunchIntentForPackage("com.google.android.soundrecorder")
+                ?: pm.getLaunchIntentForPackage("com.sec.android.app.voicenote")
+            if (soundLaunch != null) {
+                soundLaunch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(soundLaunch)
+                ExecutionResult.Success("Sound Recorder opened")
+            } else {
+                searchWeb("voice recorder app")
+            }
+        }
+    }
+
+    private fun addCalendarEvent(title: String, description: String?): ExecutionResult {
+        val intent = Intent(Intent.ACTION_INSERT).apply {
+            data = CalendarContract.Events.CONTENT_URI
+            putExtra(CalendarContract.Events.TITLE, title.ifBlank { "Aether Reminder" })
+            if (!description.isNullOrBlank()) {
+                putExtra(CalendarContract.Events.DESCRIPTION, description)
+            }
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return try {
+            context.startActivity(intent)
+            ExecutionResult.Success("Opened Calendar to add: $title")
+        } catch (_: Exception) {
+            ExecutionResult.Failure("No Calendar app found.")
+        }
+    }
+
+    private fun sendEmail(recipient: String, subject: String?, body: String?): ExecutionResult {
+        val intent = Intent(Intent.ACTION_SENDTO).apply {
+            data = Uri.parse("mailto:${Uri.encode(recipient.trim())}")
+            putExtra(Intent.EXTRA_SUBJECT, subject ?: "Note from Aether AI")
+            putExtra(Intent.EXTRA_TEXT, body ?: "")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return try {
+            context.startActivity(intent)
+            ExecutionResult.Success(if (recipient.isNotBlank()) "Opening email to $recipient" else "Opening email client")
+        } catch (_: Exception) {
+            ExecutionResult.Failure("Could not open email application.")
+        }
+    }
+
+    private fun openFiles(): ExecutionResult {
+        val intent = Intent(DownloadManager.ACTION_VIEW_DOWNLOADS).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return try {
+            context.startActivity(intent)
+            ExecutionResult.Success("Opened Downloads & Files")
+        } catch (_: Exception) {
+            openApp("files")
+        }
+    }
+
+    private fun openClock(): ExecutionResult {
+        val intent = Intent(AlarmClock.ACTION_SHOW_ALARMS).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return try {
+            context.startActivity(intent)
+            ExecutionResult.Success("Opened Clock & Alarms")
+        } catch (_: Exception) {
+            openApp("clock")
+        }
+    }
+
+    private fun readClipboard(): ExecutionResult {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = clipboard.primaryClip
+        return if (clip != null && clip.itemCount > 0) {
+            val text = clip.getItemAt(0).text?.toString() ?: ""
+            if (text.isNotBlank()) {
+                ExecutionResult.Success("Clipboard content: \"$text\"")
+            } else {
+                ExecutionResult.Success("Clipboard has empty text.")
+            }
+        } else {
+            ExecutionResult.Success("Clipboard is currently empty.")
+        }
+    }
+
+    private fun clearClipboard(): ExecutionResult {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            clipboard.clearPrimaryClip()
+        } else {
+            clipboard.setPrimaryClip(ClipData.newPlainText("", ""))
+        }
+        return ExecutionResult.Success("Clipboard cleared securely.")
+    }
+
+    private fun quickTranslate(text: String, targetLang: String?): ExecutionResult {
+        val lang = targetLang ?: "en"
+        val query = if (text.isNotBlank()) text else "Hello"
+        val url = "https://translate.google.com/?sl=auto&tl=$lang&text=${Uri.encode(query)}&op=translate"
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return try {
+            context.startActivity(intent)
+            ExecutionResult.Success("Translating: \"$query\" ($lang)")
+        } catch (_: Exception) {
+            searchWeb("translate $query to $lang")
+        }
+    }
+
+    private fun searchNearby(query: String): ExecutionResult {
+        val clean = query.ifBlank { "restaurants" }
+        val gmmIntentUri = Uri.parse("geo:0,0?q=${Uri.encode(clean)}")
+        val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri).apply {
+            setPackage("com.google.android.apps.maps")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return try {
+            context.startActivity(mapIntent)
+            ExecutionResult.Success("Searching nearby for $clean on Maps")
+        } catch (_: Exception) {
+            searchWeb("nearby $clean")
+        }
+    }
+
+    private fun speedTest(): ExecutionResult {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://fast.com")).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+        return ExecutionResult.Success("Launching network speed test")
     }
 }

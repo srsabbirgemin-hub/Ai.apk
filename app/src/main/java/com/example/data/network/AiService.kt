@@ -13,11 +13,18 @@ import org.json.JSONObject
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
+data class AgentTaskStep(
+    val actionType: String,
+    val actionTarget: String? = null,
+    val actionExtra: String? = null
+)
+
 data class AiResponse(
     val replyText: String,
     val actionType: String? = null,
     val actionTarget: String? = null,
-    val actionExtra: String? = null
+    val actionExtra: String? = null,
+    val subActions: List<AgentTaskStep> = emptyList()
 )
 
 class AiService(private val preferences: AppPreferences) {
@@ -31,19 +38,30 @@ class AiService(private val preferences: AppPreferences) {
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
 
     private val systemPrompt = """
-        You are Aether AI, a powerful, intelligent floating Android voice and multitasking assistant with 100+ actions and capabilities.
-        Languages supported: English, Bengali (বাংলা), Hindi (हिन्दी), or any requested language. Keep conversational replies concise, crisp, and friendly for voice speaking (1-2 sentences).
+        You are Aether AI, an Autonomous Android AI Agent with full device execution capabilities, multi-step workflow planning, and 100+ native actions.
+        Languages supported: English, Bengali (বাংলা), Hindi (हिन्दी), Arabic, or any requested language. Keep conversational replies crisp, warm, and natural for voice speaking (1-2 sentences).
         
-        When the user asks you to perform an action on their phone, output a strict JSON object:
+        When the user asks you to perform an action or multi-step routine on their phone, output a strict JSON object:
         {
-          "action": "<action_name>",
+          "action": "<primary_action_name>",
           "target": "<target string, number, app, contact, search query, or destination>",
           "extra": "<message text, notes body, alarm hour/minute, timer seconds, or details>",
+          "steps": [
+            { "action": "<action_1>", "target": "<target_1>", "extra": "<extra_1>" },
+            { "action": "<action_2>", "target": "<target_2>", "extra": "<extra_2>" }
+          ],
           "reply": "<natural spoken response to the user in their preferred language>"
         }
 
-        Supported Actions:
-        - "open_app": target = name of app (e.g. Spotify, YouTube, WhatsApp, Camera, Chrome, Calculator)
+        Supported Agent Actions:
+        - "open_app": target = name of app (e.g. Spotify, YouTube, WhatsApp, Camera, Chrome, Calculator, Settings)
+        - "camera": open camera to take photo or video
+        - "gallery": open device photos / gallery
+        - "voice_recorder": open sound recorder
+        - "calendar": target = event title, extra = description
+        - "email": target = recipient email, extra = subject or body
+        - "files": open downloads or device files
+        - "clock": open clock, alarms, or stopwatch
         - "call": target = contact name or phone number
         - "sms": target = contact name or number, extra = message body
         - "whatsapp": target = contact name, extra = message text
@@ -52,6 +70,9 @@ class AiService(private val preferences: AppPreferences) {
         - "note": target = note title, extra = note content
         - "search": target = query to search on Google
         - "navigate": target = address/destination for Google Maps
+        - "nearby": target = "restaurants", "gas stations", "hospitals", "atms"
+        - "speed_test": check internet connection speed
+        - "translate": target = text to translate, extra = target language (e.g. "bn", "en", "hi", "ar")
         - "youtube": target = song, artist, video title
         - "developer_facebook": open developer Facebook ID / Profile (https://www.facebook.com/Siddik9980)
         - "facebook_page": open developer Facebook Page (https://www.facebook.com/profile.php?id=61557614412925)
@@ -71,17 +92,18 @@ class AiService(private val preferences: AppPreferences) {
         - "device_info": target = "specs"
         - "volume_up", "volume_down", "volume_mute", "volume_max"
         - "ringer_silent", "ringer_vibrate", "ringer_normal"
-        - "wifi_settings", "bluetooth_settings", "display_settings"
+        - "wifi_settings", "bluetooth_settings", "display_settings", "hotspot_settings", "location_settings", "storage_settings"
         - "screenshot", "lock_screen", "notifications", "quick_settings", "recents", "split_screen"
         - "math": target = math expression (e.g. "25 * 4 + 10")
         - "unit_convert": target = unit type (e.g. "c_to_f", "km_to_mi", "kg_to_lbs"), extra = value
         - "coin_flip", "dice_roll"
         - "random_number": target = max number (e.g. "100")
         - "generate_password": target = length (e.g. "12")
+        - "read_clipboard", "clear_clipboard", "copy_clipboard"
         - "daily_briefing": target = "today"
         - "read_screen": target = "screen", extra = question
         - "go_back", "go_home"
-        - "none": normal conversation, questions, trivia, advice. Put answer in "reply".
+        - "none": normal conversation, questions, reasoning, advice. Put answer in "reply".
 
         IMPORTANT: Always include the "reply" field with your natural spoken response.
     """.trimIndent()
@@ -277,11 +299,31 @@ class AiService(private val preferences: AppPreferences) {
                 val target = json.optString("target", null)
                 val extra = json.optString("extra", null)
                 val reply = json.optString("reply", trimmed)
+
+                val subList = mutableListOf<AgentTaskStep>()
+                val stepsArray = json.optJSONArray("steps")
+                if (stepsArray != null) {
+                    for (i in 0 until stepsArray.length()) {
+                        val sObj = stepsArray.optJSONObject(i) ?: continue
+                        val sAction = sObj.optString("action", "")
+                        if (sAction.isNotBlank() && sAction != "none") {
+                            subList.add(
+                                AgentTaskStep(
+                                    actionType = sAction,
+                                    actionTarget = sObj.optString("target", null),
+                                    actionExtra = sObj.optString("extra", null)
+                                )
+                            )
+                        }
+                    }
+                }
+
                 return AiResponse(
                     replyText = reply.ifBlank { "Action executed: $action" },
                     actionType = if (action == "none" || action.isBlank()) null else action,
                     actionTarget = target,
-                    actionExtra = extra
+                    actionExtra = extra,
+                    subActions = subList
                 )
             } catch (_: Exception) {}
         }
@@ -292,6 +334,114 @@ class AiService(private val preferences: AppPreferences) {
     private fun getFallbackOfflineResponse(userPrompt: String): AiResponse {
         val lower = userPrompt.lowercase()
         return when {
+            // Autonomous Agent Multi-Step Routines
+            lower.contains("morning routine") || lower.contains("সকালের রুটিন") || lower.contains("গুড মর্নিং") || lower.contains("শুভ সকাল") -> {
+                AiResponse(
+                    replyText = "Good morning! Executing autonomous morning agent routine for you.",
+                    actionType = "daily_briefing",
+                    actionTarget = "today",
+                    subActions = listOf(
+                        AgentTaskStep("battery", "status"),
+                        AgentTaskStep("search", "top news headlines today")
+                    )
+                )
+            }
+            lower.contains("night routine") || lower.contains("ঘুমের রুটিন") || lower.contains("ঘুমাতে যাচ্ছি") || lower.contains("নাইট মোড") -> {
+                AiResponse(
+                    replyText = "Good night! Preparing bedtime agent routine: alarm set for 7:00 AM, phone silenced, volume muted, and screen locked.",
+                    actionType = "alarm",
+                    actionTarget = "07:00",
+                    actionExtra = "Morning Alarm",
+                    subActions = listOf(
+                        AgentTaskStep("ringer_silent"),
+                        AgentTaskStep("volume_mute"),
+                        AgentTaskStep("flashlight", "off"),
+                        AgentTaskStep("lock_screen")
+                    )
+                )
+            }
+            lower.contains("focus mode") || lower.contains("ফোকাস মোড") || lower.contains("পড়াশোনা") || lower.contains("study mode") -> {
+                AiResponse(
+                    replyText = "Activating 45-minute Deep Focus Session. Phone placed on vibrate, media muted, and session note saved.",
+                    actionType = "timer",
+                    actionTarget = "2700",
+                    actionExtra = "Deep Focus (45m)",
+                    subActions = listOf(
+                        AgentTaskStep("ringer_vibrate"),
+                        AgentTaskStep("volume_mute"),
+                        AgentTaskStep("note", "Deep Focus Session", "Started focused work session")
+                    )
+                )
+            }
+            lower.contains("meeting mode") || lower.contains("মিটিং মোড") || lower.contains("মিটিং এ আছি") -> {
+                AiResponse(
+                    replyText = "Activating Meeting Mode. Silencing phone and media volume.",
+                    actionType = "ringer_silent",
+                    subActions = listOf(
+                        AgentTaskStep("volume_mute"),
+                        AgentTaskStep("note", "Meeting Note", "In meeting - call back later")
+                    )
+                )
+            }
+            lower.contains("diagnostic") || lower.contains("সিস্টেম চেক") || lower.contains("ফোন চেক") || lower.contains("device check") -> {
+                AiResponse(
+                    replyText = "Running device system diagnostics and health report.",
+                    actionType = "device_info",
+                    subActions = listOf(
+                        AgentTaskStep("battery", "status"),
+                        AgentTaskStep("storage_settings")
+                    )
+                )
+            }
+
+            // Camera & Media
+            lower.contains("camera") || lower.contains("ক্যামেরা") || lower.contains("ছবি তোল") || lower.contains("ফটো তোল") -> {
+                AiResponse("Opening Camera for you.", actionType = "camera")
+            }
+            lower.contains("gallery") || lower.contains("গ্যালারি") || lower.contains("ছবি দেখ") -> {
+                AiResponse("Opening your Photos & Gallery.", actionType = "gallery")
+            }
+            lower.contains("recorder") || lower.contains("রেকর্ড") || lower.contains("ভয়েস রেকর্ড") -> {
+                AiResponse("Opening Voice Recorder.", actionType = "voice_recorder")
+            }
+            lower.contains("calendar") || lower.contains("ক্যালেন্ডার") || lower.contains("ইভেন্ট") -> {
+                AiResponse("Opening Calendar to schedule an event.", actionType = "calendar", actionTarget = "Aether Scheduled Event")
+            }
+            lower.contains("email") || lower.contains("ইমেইল") || lower.contains("মেইল") -> {
+                val emailTarget = userPrompt.substringAfter("to ").substringAfter("প্রতি ").trim()
+                AiResponse("Opening email client.", actionType = "email", actionTarget = if (emailTarget.contains("@")) emailTarget else "")
+            }
+            lower.contains("file") || lower.contains("ফাইল") || lower.contains("ডাউনলোড") -> {
+                AiResponse("Opening Downloads and File Manager.", actionType = "files")
+            }
+            lower.contains("clock") || lower.contains("ঘড়ি") || lower.contains("স্টপওয়াচ") -> {
+                AiResponse("Opening Clock and Alarms.", actionType = "clock")
+            }
+            lower.contains("speed test") || lower.contains("ইন্টারনেট স্পিড") || lower.contains("নেট স্পিড") -> {
+                AiResponse("Checking internet speed on Fast.com.", actionType = "speed_test")
+            }
+            lower.contains("nearby") || lower.contains("কাছের") || lower.contains("আশেপাশের") -> {
+                val place = if (lower.contains("হসপিটাল") || lower.contains("হাসপাতাল")) "hospital"
+                else if (lower.contains("খাবার") || lower.contains("রেস্টুরেন্ট")) "restaurant"
+                else if (lower.contains("পাম্প") || lower.contains("তেল")) "gas station"
+                else if (lower.contains("এটিএম") || lower.contains("ব্যাংক")) "atm"
+                else "restaurants"
+                AiResponse("Searching nearby $place on Google Maps.", actionType = "nearby", actionTarget = place)
+            }
+            lower.contains("translate") || lower.contains("অনুবাদ") || lower.contains("অর্থ") -> {
+                val textToTrans = userPrompt.replace("translate", "", ignoreCase = true)
+                    .replace("অনুবাদ করো", "", ignoreCase = true)
+                    .replace("অর্থ কি", "", ignoreCase = true)
+                    .trim()
+                AiResponse("Translating text: \"$textToTrans\".", actionType = "translate", actionTarget = textToTrans.ifBlank { "Hello" })
+            }
+            lower.contains("clipboard") || lower.contains("ক্লিপবোর্ড") -> {
+                if (lower.contains("clear") || lower.contains("মুছে") || lower.contains("ক্লিয়ার")) {
+                    AiResponse("Clearing clipboard.", actionType = "clear_clipboard")
+                } else {
+                    AiResponse("Checking clipboard content.", actionType = "read_clipboard")
+                }
+            }
             // Next Video / Next Reel (পরের ভিডিও / পরের রিল / পাল্টাও / পাল্টাতে / স্ক্রোল করো)
             lower.contains("next reel") || lower.contains("next video") || lower.contains("পরের ভিডিও") || lower.contains("পরের রিল") || lower.contains("পাল্টাও") || lower.contains("পাল্টাতে") || lower.contains("পাল্টাও ভিডিও") || lower.contains("ভিডিও পাল্টাও") || lower.contains("পরেরটা") || lower.contains("scroll down") || lower.contains("স্ক্রোল") || lower.contains("change video") || lower.contains("change reel") -> {
                 AiResponse("Swiping to next video / reel for you.", actionType = "next_reel")

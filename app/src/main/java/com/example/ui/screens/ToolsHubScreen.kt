@@ -22,17 +22,26 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Casino
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.FlashlightOn
-import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Password
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.VolumeDown
 import androidx.compose.material.icons.filled.VolumeMute
 import androidx.compose.material.icons.filled.VolumeUp
@@ -63,7 +72,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -91,9 +99,10 @@ fun ToolsHubScreen(
     val context = LocalContext.current
     var selectedCategoryTab by remember { mutableIntStateOf(0) }
     var mathInput by remember { mutableStateOf("150 * 12 + 45") }
+    var translateInput by remember { mutableStateOf("How are you today?") }
     var toolResultText by remember { mutableStateOf<String?>(null) }
 
-    val categories = listOf("Quick Toggles", "Smart Tools", "100+ Commands")
+    val categories = listOf("🤖 Agent Routines", "⚡ Quick Toggles", "🛠️ Smart Tools", "📜 100+ Commands")
 
     Column(
         modifier = modifier
@@ -109,14 +118,14 @@ fun ToolsHubScreen(
         ) {
             Column {
                 Text(
-                    text = "AI TOOLS & ACTIONS",
+                    text = "AI AGENT & TOOLS HUB",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 1.sp,
                     color = TextPrimary
                 )
                 Text(
-                    text = "100+ hardware controls, gestures & utilities",
+                    text = "Autonomous multi-step routines & 100+ native device controls",
                     fontSize = 11.sp,
                     color = ElectricCyan
                 )
@@ -145,7 +154,7 @@ fun ToolsHubScreen(
                     text = {
                         Text(
                             text = title,
-                            fontSize = 12.sp,
+                            fontSize = 11.sp,
                             fontWeight = if (selectedCategoryTab == index) FontWeight.Bold else FontWeight.Normal,
                             color = if (selectedCategoryTab == index) Color.White else TextSecondary
                         )
@@ -162,7 +171,9 @@ fun ToolsHubScreen(
                 colors = CardDefaults.cardColors(containerColor = SurfaceNavy),
                 shape = RoundedCornerShape(12.dp),
                 border = androidx.compose.foundation.BorderStroke(1.dp, NeonGreen),
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
             ) {
                 Row(
                     modifier = Modifier.padding(12.dp),
@@ -190,9 +201,165 @@ fun ToolsHubScreen(
             when (selectedCategoryTab) {
                 0 -> {
                     // --------------------------------------------------------
-                    // Quick Hardware Toggles Grid
+                    // Tab 0: Autonomous Agent Routines
                     // --------------------------------------------------------
-                    Text("DEVICE HARDWARE & VOLUME", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = ElectricCyan)
+                    Text(
+                        text = "AUTONOMOUS AGENT WORKFLOWS (স্বয়ংক্রিয় এজেন্ট রুটিনস)",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ElectricCyan
+                    )
+
+                    AgentRoutineCard(
+                        title = "Morning Agent Routine",
+                        titleBn = "সকালের রুটিন (Morning Briefing & News)",
+                        description = "Runs daily briefing, verifies battery health, and loads top news headlines.",
+                        steps = listOf("Speak Daily Briefing", "Check Battery Status", "Search Top News on Google"),
+                        badgeColor = Color(0xFFFBBF24),
+                        buttonText = "Execute Morning Routine",
+                        onExecute = {
+                            viewModel.runAgentRoutine("morning")
+                            toolResultText = "Executing Morning Agent Routine..."
+                        }
+                    )
+
+                    AgentRoutineCard(
+                        title = "Bedtime & Sleep Mode",
+                        titleBn = "ঘুমের রুটিন (Bedtime Routine)",
+                        description = "Schedules 7:00 AM alarm, silences phone, mutes media, turns off flashlight, and locks device.",
+                        steps = listOf("Set 7:00 AM Alarm", "Set Phone to Silent", "Mute Media Volume", "Turn Off Flashlight", "Lock Screen"),
+                        badgeColor = NeonPurple,
+                        buttonText = "Execute Bedtime Routine",
+                        onExecute = {
+                            viewModel.runAgentRoutine("night")
+                            toolResultText = "Executing Bedtime Routine..."
+                        }
+                    )
+
+                    AgentRoutineCard(
+                        title = "45-Min Deep Focus Mode",
+                        titleBn = "পড়াশোনা ও ফোকাস মোড (Focus Session)",
+                        description = "Starts a 45-minute focus timer, switches phone to vibrate, mutes media, and logs note.",
+                        steps = listOf("Set 45m Timer", "Phone to Vibrate", "Mute Media Volume", "Save Focus Session Note"),
+                        badgeColor = NeonGreen,
+                        buttonText = "Start Focus Sprint",
+                        onExecute = {
+                            viewModel.runAgentRoutine("focus")
+                            toolResultText = "Executing Focus Routine..."
+                        }
+                    )
+
+                    AgentRoutineCard(
+                        title = "Meeting / Silent Mode",
+                        titleBn = "মিটিং মোড (Instant Silence)",
+                        description = "Silences phone ringer, mutes media, and creates quick meeting note.",
+                        steps = listOf("Phone to Silent", "Mute Media Volume", "Save Meeting Note"),
+                        badgeColor = NeonPink,
+                        buttonText = "Activate Meeting Mode",
+                        onExecute = {
+                            viewModel.runAgentRoutine("meeting")
+                            toolResultText = "Activated Meeting Mode"
+                        }
+                    )
+
+                    AgentRoutineCard(
+                        title = "System Diagnostics & Health",
+                        titleBn = "সিস্টেম ডায়াগনস্টিক ও অপ্টিমাইজেশন",
+                        description = "Reads device specs, free RAM, battery status, and opens storage manager.",
+                        steps = listOf("Check Model, RAM & Android Version", "Check Battery Level & Charging", "Open Storage Manager"),
+                        badgeColor = ElectricCyan,
+                        buttonText = "Run System Diagnostics",
+                        onExecute = {
+                            viewModel.runAgentRoutine("diagnostic")
+                            toolResultText = "Running Diagnostics..."
+                        }
+                    )
+
+                    AgentRoutineCard(
+                        title = "Hands-Free Reels & Shorts",
+                        titleBn = "অটো রিলস ও শর্টস মোড",
+                        description = "Launches YouTube Shorts and starts hands-free auto-scrolling every 15 seconds.",
+                        steps = listOf("Open YouTube Shorts", "Enable Auto-Scroll (15s interval)"),
+                        badgeColor = Color(0xFFFF0000),
+                        buttonText = "Start Auto Reels",
+                        onExecute = {
+                            viewModel.runAgentRoutine("social")
+                            toolResultText = "Starting Auto Reels..."
+                        }
+                    )
+
+                    // Developer & Creator Profile Hub
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = SurfaceNavy),
+                        shape = RoundedCornerShape(16.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, NeonGreen)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "OFFICIAL DEVELOPER & CREATOR HUB",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Black,
+                                color = NeonGreen
+                            )
+                            Text(
+                                text = "অফিসিয়াল ফেসবুক আইডি, পেজ, টেলিগ্রাম ও ইউটিউব চ্যানেল",
+                                fontSize = 11.sp,
+                                color = TextSecondary
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = { viewModel.actionExecutor.openFacebookProfile() },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1877F2)),
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Text("FB Profile", fontSize = 11.sp, color = Color.White)
+                                }
+                                Button(
+                                    onClick = { viewModel.actionExecutor.openFacebookPage() },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0D8BF0)),
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Text("FB Page", fontSize = 11.sp, color = Color.White)
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = { viewModel.actionExecutor.openTelegramChannel() },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0088CC)),
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Text("Telegram", fontSize = 11.sp, color = Color.White)
+                                }
+                                Button(
+                                    onClick = { viewModel.actionExecutor.openYouTubeChannel() },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF0000)),
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Text("YouTube", fontSize = 11.sp, color = Color.White)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                1 -> {
+                    // --------------------------------------------------------
+                    // Tab 1: Quick Hardware & Media Toggles Grid
+                    // --------------------------------------------------------
+                    Text("DEVICE HARDWARE & MEDIA", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = ElectricCyan)
 
                     FlowRow(
                         modifier = Modifier.fillMaxWidth(),
@@ -216,6 +383,66 @@ fun ToolsHubScreen(
                             onClick = {
                                 val res = viewModel.actionExecutor.getBatteryInfo()
                                 if (res is ExecutionResult.Success) toolResultText = res.message
+                            }
+                        )
+
+                        ToolActionButton(
+                            icon = Icons.Default.CameraAlt,
+                            label = "Camera 📷",
+                            accentColor = NeonPink,
+                            onClick = {
+                                viewModel.actionExecutor.execute("camera", null, null)
+                                toolResultText = "Camera opened"
+                            }
+                        )
+
+                        ToolActionButton(
+                            icon = Icons.Default.PhotoLibrary,
+                            label = "Gallery 🖼️",
+                            accentColor = ElectricCyan,
+                            onClick = {
+                                viewModel.actionExecutor.execute("gallery", null, null)
+                                toolResultText = "Gallery opened"
+                            }
+                        )
+
+                        ToolActionButton(
+                            icon = Icons.Default.Mic,
+                            label = "Recorder 🎙️",
+                            accentColor = NeonPurple,
+                            onClick = {
+                                viewModel.actionExecutor.execute("voice_recorder", null, null)
+                                toolResultText = "Sound recorder opened"
+                            }
+                        )
+
+                        ToolActionButton(
+                            icon = Icons.Default.CalendarMonth,
+                            label = "Calendar 📅",
+                            accentColor = Color(0xFF38BDF8),
+                            onClick = {
+                                viewModel.actionExecutor.execute("calendar", "Aether Reminder", null)
+                                toolResultText = "Opened Calendar"
+                            }
+                        )
+
+                        ToolActionButton(
+                            icon = Icons.Default.Folder,
+                            label = "Downloads 📁",
+                            accentColor = Color(0xFFF59E0B),
+                            onClick = {
+                                viewModel.actionExecutor.execute("files", null, null)
+                                toolResultText = "Opened Downloads / Files"
+                            }
+                        )
+
+                        ToolActionButton(
+                            icon = Icons.Default.Alarm,
+                            label = "Clock / Alarm",
+                            accentColor = Color(0xFFE879F9),
+                            onClick = {
+                                viewModel.actionExecutor.execute("clock", null, null)
+                                toolResultText = "Opened Clock & Alarms"
                             }
                         )
 
@@ -403,12 +630,30 @@ fun ToolsHubScreen(
                                 viewModel.actionExecutor.execute("wifi_settings", null, null)
                             }
                         )
+
+                        ToolActionButton(
+                            icon = Icons.Default.NearMe,
+                            label = "Location / GPS",
+                            accentColor = NeonGreen,
+                            onClick = {
+                                viewModel.actionExecutor.execute("location_settings", null, null)
+                            }
+                        )
+
+                        ToolActionButton(
+                            icon = Icons.Default.Settings,
+                            label = "Storage Settings",
+                            accentColor = Color(0xFFFBBF24),
+                            onClick = {
+                                viewModel.actionExecutor.execute("storage_settings", null, null)
+                            }
+                        )
                     }
                 }
 
-                1 -> {
+                2 -> {
                     // --------------------------------------------------------
-                    // Smart Productivity Tools
+                    // Tab 2: Smart Productivity & Web Tools
                     // --------------------------------------------------------
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -454,6 +699,178 @@ fun ToolsHubScreen(
                         }
                     }
 
+                    // Quick Translation Card
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+                        shape = RoundedCornerShape(16.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, CardBorderGradient)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(imageVector = Icons.Default.Language, contentDescription = null, tint = NeonGreen)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Quick Language Translation", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = translateInput,
+                                onValueChange = { translateInput = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = TextPrimary,
+                                    unfocusedTextColor = TextPrimary,
+                                    focusedBorderColor = NeonGreen,
+                                    unfocusedBorderColor = GlassBorder
+                                ),
+                                singleLine = true
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        viewModel.actionExecutor.execute("translate", translateInput, "bn")
+                                        toolResultText = "Translating to Bengali (বাংলা)..."
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceNavy),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, NeonGreen),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("To বাংলা", fontSize = 12.sp)
+                                }
+                                Button(
+                                    onClick = {
+                                        viewModel.actionExecutor.execute("translate", translateInput, "en")
+                                        toolResultText = "Translating to English..."
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceNavy),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, ElectricCyan),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("To English", fontSize = 12.sp)
+                                }
+                            }
+                        }
+                    }
+
+                    // Nearby Search on Maps
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+                        shape = RoundedCornerShape(16.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, CardBorderGradient)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(imageVector = Icons.Default.NearMe, contentDescription = null, tint = Color(0xFF38BDF8))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Nearby Places Finder (Google Maps)", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+                            FlowRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                listOf("Restaurants", "Hospitals", "Gas Stations", "ATMs", "Pharmacies").forEach { place ->
+                                    Button(
+                                        onClick = {
+                                            viewModel.actionExecutor.execute("nearby", place.lowercase(), null)
+                                            toolResultText = "Searching nearby $place..."
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = SurfaceNavy),
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF38BDF8)),
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Text(place, fontSize = 11.sp, color = TextPrimary)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Network Speed Test
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+                        shape = RoundedCornerShape(16.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, CardBorderGradient)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Network Speed Test", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                Text("Check real-time upload and download speeds on Fast.com", fontSize = 11.sp, color = TextSecondary)
+                            }
+                            Button(
+                                onClick = {
+                                    viewModel.actionExecutor.execute("speed_test", null, null)
+                                    toolResultText = "Launching speed test on Fast.com..."
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = NeonPurple),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(imageVector = Icons.Default.Speed, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Test")
+                            }
+                        }
+                    }
+
+                    // Clipboard Tools
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+                        shape = RoundedCornerShape(16.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, CardBorderGradient)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(imageVector = Icons.Default.ContentCopy, contentDescription = null, tint = Color(0xFFFBBF24))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Smart Clipboard Manager", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        val res = viewModel.actionExecutor.execute("read_clipboard", null, null)
+                                        if (res is ExecutionResult.Success) toolResultText = res.message
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceNavy),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFBBF24)),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Read Clipboard", fontSize = 11.sp)
+                                }
+                                Button(
+                                    onClick = {
+                                        val res = viewModel.actionExecutor.execute("clear_clipboard", null, null)
+                                        if (res is ExecutionResult.Success) toolResultText = res.message
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceNavy),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF43F5E)),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Clear Clipboard", fontSize = 11.sp)
+                                }
+                            }
+                        }
+                    }
+
+                    // Secure Password Generator
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = SurfaceCard),
@@ -486,6 +903,7 @@ fun ToolsHubScreen(
                         }
                     }
 
+                    // Decision Randomizers
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = SurfaceCard),
@@ -531,14 +949,29 @@ fun ToolsHubScreen(
                     }
                 }
 
-                2 -> {
+                3 -> {
                     // --------------------------------------------------------
-                    // 100+ Commands Catalog
+                    // Tab 3: 100+ Commands Catalog
                     // --------------------------------------------------------
                     val commandCategories = listOf(
+                        "Autonomous Agent Workflows (এজেন্ট রুটিন)" to listOf(
+                            "সকালের রুটিন চালাও",
+                            "ঘুমের রুটিন চালু করো",
+                            "ফোকাস মোড অন করো",
+                            "মিটিং মোড চালু করো",
+                            "সিস্টেম ডায়াগনস্টিক চেক করো",
+                            "অটো রিলস চালু করো",
+                            "Run morning routine",
+                            "Run night routine",
+                            "Start focus mode",
+                            "System health check"
+                        ),
                         "Bengali বাংলা Commands" to listOf(
                             "টর্চ জ্বালাও",
                             "ব্যাটারি কত?",
+                            "ক্যামেরা খোল",
+                            "গ্যালারি দেখাও",
+                            "ভয়েস রেকর্ড করো",
                             "স্ক্রিনশট নাও",
                             "মাকে কল করো",
                             "ইউটিউবে গান বাজাও",
@@ -546,14 +979,18 @@ fun ToolsHubScreen(
                             "হিসাব করো ২৫ * ৪",
                             "পাসওয়ার্ড তৈরি করো",
                             "স্পটিফাই ওপেন করো",
-                            "ক্যামেরা খোল"
+                            "অনুবাদ করো How are you",
+                            "কাছের রেস্টুরেন্ট খোঁজো",
+                            "নেট স্পিড টেস্ট করো"
                         ),
                         "Phone & Communications" to listOf(
                             "Call Mom",
                             "Call Alex mobile",
                             "Send SMS to Sarah: I will be late",
                             "Send WhatsApp to John: Hey!",
-                            "Dial 911"
+                            "Send email to test@gmail.com",
+                            "Open calendar and add reminder",
+                            "Open Downloads"
                         ),
                         "Device & Hardware Control" to listOf(
                             "Turn on flashlight",
@@ -567,13 +1004,18 @@ fun ToolsHubScreen(
                             "Take screenshot",
                             "Lock phone",
                             "Pull down notifications",
-                            "Open quick settings"
+                            "Open quick settings",
+                            "Open Wi-Fi settings",
+                            "Open location settings",
+                            "Open storage settings"
                         ),
                         "Apps & Media" to listOf(
+                            "Open Camera",
+                            "Open Gallery",
+                            "Open Voice Recorder",
                             "Open YouTube",
                             "Play Bohemian Rhapsody",
                             "Open Spotify",
-                            "Open Camera",
                             "Open WhatsApp",
                             "Open Chrome",
                             "Open Calculator",
@@ -585,6 +1027,8 @@ fun ToolsHubScreen(
                             "Daily briefing",
                             "Add note: Buy groceries",
                             "What's on my screen?",
+                            "Read clipboard",
+                            "Clear clipboard",
                             "Go to home screen",
                             "Go back"
                         ),
@@ -598,10 +1042,12 @@ fun ToolsHubScreen(
                             "Generate 16-character password"
                         ),
                         "Navigation & Searches" to listOf(
-                            "Navigate to Central Park",
-                            "Navigate to nearest pharmacy",
-                            "Search Google for AI news",
-                            "Search web for weather"
+                            "Search Google for latest tech news",
+                            "Navigate to nearest coffee shop",
+                            "Find nearby hospitals",
+                            "Find nearby gas stations",
+                            "Test internet speed",
+                            "Translate Hello to Bengali"
                         )
                     )
 
@@ -629,6 +1075,77 @@ fun ToolsHubScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun AgentRoutineCard(
+    title: String,
+    titleBn: String,
+    description: String,
+    steps: List<String>,
+    badgeColor: Color,
+    buttonText: String = "Execute Routine",
+    onExecute: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+        shape = RoundedCornerShape(16.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, badgeColor.copy(alpha = 0.5f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text(text = titleBn, fontSize = 12.sp, color = badgeColor)
+                }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(badgeColor.copy(alpha = 0.15f))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(text = "AUTONOMOUS", fontSize = 10.sp, fontWeight = FontWeight.Black, color = badgeColor)
+                }
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(text = description, fontSize = 11.sp, color = TextSecondary)
+            Spacer(modifier = Modifier.height(10.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                steps.forEachIndexed { idx, step ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(16.dp)
+                                .clip(CircleShape)
+                                .background(badgeColor.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = "${idx + 1}", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = badgeColor)
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = step, fontSize = 11.sp, color = TextPrimary)
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(
+                onClick = onExecute,
+                colors = ButtonDefaults.buttonColors(containerColor = badgeColor.copy(alpha = 0.25f)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, badgeColor),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, tint = badgeColor, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(text = buttonText, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

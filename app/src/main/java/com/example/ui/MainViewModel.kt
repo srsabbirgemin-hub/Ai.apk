@@ -16,6 +16,7 @@ import com.example.data.model.ChatSession
 import com.example.service.AetherAccessibilityService
 import com.example.service.FloatingAgentService
 import com.example.voice.OrbVoiceState
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -196,6 +197,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 var executedStatus: String? = null
                 var executedPayload: String? = null
 
+                val planResults = mutableListOf<String>()
+
                 if (!response.actionType.isNullOrBlank()) {
                     val exec = actionExecutor.execute(
                         response.actionType,
@@ -206,16 +209,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         is ExecutionResult.Success -> {
                             executedStatus = exec.message
                             executedPayload = listOfNotNull(response.actionTarget, response.actionExtra).joinToString(" • ")
+                            planResults.add("Step 1: ${exec.message}")
                         }
                         is ExecutionResult.Failure -> {
                             executedStatus = "Failed: ${exec.reason}"
                             executedPayload = response.actionTarget
+                            planResults.add("Step 1: Failed (${exec.reason})")
                         }
                         is ExecutionResult.ScreenText -> {
                             executedStatus = "Screen Read Success"
                             executedPayload = exec.text.take(80) + "..."
+                            planResults.add("Step 1: Screen Read Success")
                         }
                     }
+                }
+
+                // Execute any autonomous agent sub-actions
+                if (response.subActions.isNotEmpty()) {
+                    for ((index, step) in response.subActions.withIndex()) {
+                        delay(250)
+                        val stepRes = actionExecutor.execute(step.actionType, step.actionTarget, step.actionExtra)
+                        val stepNum = index + 2
+                        when (stepRes) {
+                            is ExecutionResult.Success -> planResults.add("Step $stepNum: ${stepRes.message}")
+                            is ExecutionResult.Failure -> planResults.add("Step $stepNum: Failed (${stepRes.reason})")
+                            is ExecutionResult.ScreenText -> planResults.add("Step $stepNum: Screen Captured")
+                        }
+                    }
+                    executedStatus = planResults.joinToString(" • ")
                 }
 
                 val assistantMsg = ChatMessage(
@@ -323,6 +344,77 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(genericIntent)
+        }
+    }
+
+    fun runAgentRoutine(routineType: String) {
+        viewModelScope.launch {
+            _isAiThinking.value = true
+            val sessionId = _activeSessionId.value
+            val (routineNameBn, steps) = when (routineType.lowercase().trim()) {
+                "morning" -> "সকালের রুটিন (Morning Routine)" to listOf(
+                    com.example.data.network.AgentTaskStep("daily_briefing", "today"),
+                    com.example.data.network.AgentTaskStep("battery", "status"),
+                    com.example.data.network.AgentTaskStep("search", "today breaking news headlines")
+                )
+                "night" -> "ঘুমের রুটিন (Night Routine)" to listOf(
+                    com.example.data.network.AgentTaskStep("alarm", "07:00", "Morning Alarm"),
+                    com.example.data.network.AgentTaskStep("ringer_silent"),
+                    com.example.data.network.AgentTaskStep("volume_mute"),
+                    com.example.data.network.AgentTaskStep("flashlight", "off"),
+                    com.example.data.network.AgentTaskStep("lock_screen")
+                )
+                "focus" -> "ফোকাস ও স্টাডি মোড (Focus Mode)" to listOf(
+                    com.example.data.network.AgentTaskStep("timer", "2700", "Deep Focus 45m"),
+                    com.example.data.network.AgentTaskStep("ringer_vibrate"),
+                    com.example.data.network.AgentTaskStep("volume_mute"),
+                    com.example.data.network.AgentTaskStep("note", "Focus Session", "Started 45 min focus sprint")
+                )
+                "meeting" -> "মিটিং মোড (Meeting Mode)" to listOf(
+                    com.example.data.network.AgentTaskStep("ringer_silent"),
+                    com.example.data.network.AgentTaskStep("volume_mute"),
+                    com.example.data.network.AgentTaskStep("note", "Meeting Started", "In meeting - please text")
+                )
+                "diagnostic" -> "সিস্টেম ডায়াগনস্টিক (System Diagnostics)" to listOf(
+                    com.example.data.network.AgentTaskStep("device_info"),
+                    com.example.data.network.AgentTaskStep("battery", "status"),
+                    com.example.data.network.AgentTaskStep("storage_settings")
+                )
+                "social" -> "রিলস ও শর্টস মোড (Reels & Shorts Mode)" to listOf(
+                    com.example.data.network.AgentTaskStep("youtube_shorts"),
+                    com.example.data.network.AgentTaskStep("auto_scroll", "15")
+                )
+                else -> routineType to emptyList()
+            }
+
+            val results = mutableListOf<String>()
+            for ((idx, step) in steps.withIndex()) {
+                delay(300)
+                val res = actionExecutor.execute(step.actionType, step.actionTarget, step.actionExtra)
+                val num = idx + 1
+                when (res) {
+                    is ExecutionResult.Success -> results.add("$num. ${res.message}")
+                    is ExecutionResult.Failure -> results.add("$num. Failed (${res.reason})")
+                    is ExecutionResult.ScreenText -> results.add("$num. Screen captured")
+                }
+            }
+            _isAiThinking.value = false
+
+            val report = "🤖 স্বয়ংক্রিয় এজেন্ট সম্পন্ন: $routineNameBn\n\n" + results.joinToString("\n")
+            val assistantMsg = ChatMessage(
+                sessionId = sessionId,
+                role = "assistant",
+                content = report,
+                timestamp = System.currentTimeMillis(),
+                actionType = "routine_$routineType",
+                actionPayload = routineType,
+                actionStatus = "Executed ${results.size} steps"
+            )
+            chatRepository.saveMessage(assistantMsg)
+
+            if (preferences.isVoiceReplyEnabled()) {
+                voiceManager.speak("Agent routine $routineType executed.")
+            }
         }
     }
 }

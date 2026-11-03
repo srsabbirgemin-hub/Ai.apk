@@ -91,7 +91,13 @@ fun HomeScreen(
     val isBatteryOptimizedIgnored by viewModel.isBatteryOptimizationIgnored.collectAsState()
 
     val quickActions = listOf(
-        "👑 ওনার আইডি" to "Open developer Facebook ID",
+        "🤖 সকালের রুটিন" to "সকালের রুটিন চালাও",
+        "🌙 ঘুমের রুটিন" to "ঘুমের রুটিন চালু করো",
+        "🎯 ফোকাস মোড" to "ফোকাস মোড চালু করো",
+        "🔍 সিস্টেম ডায়াগনস্টিক" to "সিস্টেম ডায়াগনস্টিক চেক করো",
+        "📷 ক্যামেরা" to "open camera",
+        "🎙️ ভয়েস রেকর্ড" to "open voice recorder",
+        "👑 ওনার ফেসবুক" to "Open developer Facebook ID",
         "📄 অফিসিয়াল পেইজ" to "Open Facebook page",
         "✈️ টেলিগ্রাম চ্যানেল" to "Open Telegram channel",
         "▶️ ইউটিউব চ্যানেল" to "Open YouTube channel",
@@ -100,9 +106,7 @@ fun HomeScreen(
         "Set Alarm 7 AM" to "Set an alarm for 7:00 AM",
         "Open Spotify" to "Open Spotify",
         "What's on screen?" to "What's on my screen?",
-        "5 min Timer" to "Set a timer for 5 minutes",
-        "Search tech news" to "Search Google for latest tech news",
-        "Navigate to Coffee" to "Navigate to nearest coffee shop"
+        "5 min Timer" to "Set a timer for 5 minutes"
     )
 
     Column(
