@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Aether AI</string>
+    <string name="accessibility_service_description">Aether AI uses this service optionally when requested by the user to read on-screen text ("what\'s on my screen?") and perform basic navigation actions (Home and Back).</string>
+</resources>
